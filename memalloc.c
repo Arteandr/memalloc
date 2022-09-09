@@ -65,6 +65,39 @@ void *malloc(size_t size) {
   return (void*)(header + 1);
 }
 
+void free(void *block) {
+  header_t *header, *tmp;
+  void *pbreak;
+  
+  if (!block)
+    return;
+
+  pthread_mutex_lock(&malloc_lock);
+  header = (header_t*)block - 1;
+
+  pbreak = sbrk(0);
+  if ((char*)block + header->s.size == pbreak) {
+    if (head == tail) {
+      head = tail = NULL;
+    } else {
+      tmp = head;
+      while (tmp) {
+        if(tmp->s.next == tail) {
+          tmp->s.next = NULL;
+          tail = tmp;
+        }
+        tmp = tmp->s.next;
+      }
+    }
+    sbrk(0 - sizeof(header_t) - header->s.size);
+    pthread_mutex_unlock(&malloc_lock);
+    return;
+  }
+
+  header->s.is_free = 1;
+  pthread_mutex_unlock(&malloc_lock);
+}
+
 void print_mem() {
   header_t *curr = head;
   printf("head = %p, tail = %p \n", (void*)head, (void*)tail);

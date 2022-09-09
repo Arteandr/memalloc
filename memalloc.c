@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <string.h>
+
 #include <stdio.h>
 
 typedef char ALIGN[16];
@@ -96,6 +98,24 @@ void free(void *block) {
 
   header->s.is_free = 1;
   pthread_mutex_unlock(&malloc_lock);
+}
+
+void *calloc(size_t num, size_t nsize) {
+  size_t size;
+  void *block;
+  if (!num || !nsize)
+    return NULL;
+
+  size = num * nsize;
+  /* check multiplicative overflow */
+  if (nsize != size / num)
+    return NULL;
+
+  block = malloc(size);
+  if (!block)
+    return NULL;
+  memset(block, 0, size);
+  return block;
 }
 
 void print_mem() {
